@@ -162,8 +162,8 @@ def generate_summarize(raw_text, callback):
 
 
 # page title
-st.set_page_config(page_title='🦜🔗 Theleelab 문서 기반 요약 및 QA 챗봇')
-st.title('🦜🔗 Theleelab 문서 기반 요약 및 QA 챗봇')
+st.set_page_config(page_title='ก₍⸍⸌̣ʷ̣̫⸍̣⸌₎ค Theleelab 문서 기반 요약 및 QA 챗봇')
+st.title('ก₍⸍⸌̣ʷ̣̫⸍̣⸌₎ค Theleelab 문서 기반 요약 및 QA 챗봇')
 
 import os
 api_key = st.sidebar.text_input("Enter your OpenAI API Key", type="password")
