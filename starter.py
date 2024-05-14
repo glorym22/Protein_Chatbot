@@ -147,7 +147,7 @@ def generate_summarize(raw_text, callback):
 
     rag_prompt = [
         SystemMessage(
-            content="다음 나올 문서를 'Notion style'로 요약해줘. Introduction을 간단하게 요약한 후 Method와 Result에 대해서 불릿 포인트를 사용해서 자세하게 설명하도록 해. References 내용은 제외해"
+            content="다음 나올 문서를 'Notion style'로 요약해줘. Introduction을 간단하게 요약한 후 Method와 Result 부분은 각 챕터별로 불릿 포인트를 사용해서 최대한 자세하게 설명하도록 해. References 내용은 제외해"
             ),
         HumanMessage(
             content=raw_text
