@@ -130,7 +130,7 @@ def generate_response(query_text, vectorstore, callback):
     # chaining
     rag_prompt = [
         SystemMessage(
-            content="너는 문서에 대해 질의응답을 하는 '씨엔이'야. 주어진 문서를 참고하여 사용자의 질문에 답변을 해줘. 문서에 내용이 정확하게 나와있지 않으면 대답하지 마."
+            content="너는 문서에 대해 질의응답을 하는 '씨엔이'야. 주어진 논문과 문서를 참고하여 사용자의 질문에 답변을 해줘. 문서에 내용이 부족하다면 네가 알고 있는 지식을 포함해서 답변해줘"
             ),
         HumanMessage(
             content=f"질문:{query_text}\n\n{docs}"
@@ -149,7 +149,7 @@ def generate_summarize(raw_text, callback):
 
 # page title
 st.set_page_config(page_title='/ᐠ ._. ᐟ\ﾉ 문서 기반 요약 및 QA 챗봇')
-st.title('/ᐠ ._. ᐟ\ﾉ Theeleelab \n 문서 기반 요약 및 QA 챗봇')
+st.title('/ᐠ ._. ᐟ\ﾉ The leelab \n 문서 기반 요약 및 QA 챗봇')
 
 # enter token
 import os
@@ -173,7 +173,7 @@ if uploaded_file:
 if "messages" not in st.session_state:
     st.session_state["messages"] = [
         ChatMessage(
-            role="assistant", content="항상 수고가 많으십니다^^7 어떤게 궁금하신가요?"
+            role="assistant", content="항상 수고가 많으십니다!^^7 어떤게 궁금하신가요?"
         )
     ]
 
