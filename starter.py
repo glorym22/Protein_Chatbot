@@ -184,7 +184,7 @@ if uploaded_file:
 if "messages" not in st.session_state:
     st.session_state["messages"] = [
         ChatMessage(
-            role="assistant", content="항상 수고가 많으십니다!^^7 어떤게 궁금하신가요?"
+            role="assistant", content="/ᐠ_ ꞈ _ᐟ\ɴʏᴀ~ 항상 수고가 많으십니다!^^7 어떤게 궁금하신가요?"
         )
     ]
 
