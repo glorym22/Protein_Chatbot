@@ -126,7 +126,7 @@ def generate_response(query_text, vectorstore, callback):
     print(docs)
         
     # generator
-    llm = ChatOpenAI(model_name="gpt-4", temperature=0, streaming=True, callbacks=[callback])
+    llm = ChatOpenAI(model_name="gpt-4o", temperature=0, streaming=True, callbacks=[callback])
     
     # chaining
     rag_prompt = [
@@ -162,7 +162,7 @@ def generate_summarize(raw_text, callback):
 
 
 # page title
-st.set_page_config(page_title='*ฅ^•ﻌ•^ฅ* Theleelab 문서 기반 요약 및 QA 챗봇')
+st.set_page_config(page_title='*ฅ^•ﻌ•^ฅ* Theleelab 챗봇')
 st.title('*ฅ^•ﻌ•^ฅ* Theleelab 문서 기반 요약 및 QA 챗봇')
 
 import os
