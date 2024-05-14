@@ -147,7 +147,7 @@ def generate_summarize(raw_text, callback):
 
     rag_prompt = [
         SystemMessage(
-            content="다음 나올 문서를 'Notion style'로 요약해줘. 중요한 내용만."
+            content="다음 나올 문서를 'Notion style'로 요약해줘. Introduction을 간단하게 요약한 후 Method와 Result에 대해서 불릿 포인트를 사용해서 자세하게 설명하도록 해. References 내용은 제외해"
             ),
         HumanMessage(
             content=raw_text
@@ -193,7 +193,7 @@ for msg in st.session_state.messages:
     st.chat_message(msg.role).write(msg.content)
     
 # message interaction
-if prompt := st.chat_input("'요약'이라고 입력해보세요!"):
+if prompt := st.chat_input("'요약'이라고 입력하면 논문을 요약함 =^._.^= ∫"):
     st.session_state.messages.append(ChatMessage(role="user", content=prompt))
     st.chat_message("user").write(prompt)
 
