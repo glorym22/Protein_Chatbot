@@ -134,8 +134,9 @@ def generate_response(query_text, vectorstore, callback):
             ),
         HumanMessage(
             content=f"질문:{query_text}\n\n{docs}"
-            ),
-        ]
+        ),
+    ]
+    
     response = llm(rag_prompt)
     
     return response.content
