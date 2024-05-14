@@ -143,6 +143,17 @@ def generate_response(query_text, vectorstore, callback):
 
 
 def generate_summarize(raw_text, callback):
+    llm = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0, streaming=True, callbacks=[callback])
+
+    rag_prompt = [
+        SystemMessage(
+            content="다음 나올 문서를 'Notion style'로 요약해줘. 중요한 내용만."
+            ),
+        HumanMessage(
+            content=raw_text
+            ),
+        ]
+    response = llm(rag_prompt)
 
     return response.content
 
