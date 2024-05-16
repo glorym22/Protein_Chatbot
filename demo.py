@@ -194,7 +194,7 @@ def abstract_summary(raw_text, callback):
 
 # page title
 st.set_page_config(page_title='/ᐠ ._. ᐟ\ﾉ 문서 기반 요약 및 QA 챗봇~')
-st.title('/ᐠ ._. ᐟ\ﾉ The leelab \n 문서 기반 요약 및 QA 챗봇')
+st.title('/ᐠ ._. ᐟ\ﾉ The leelab \n 문서 기반 요약 및 QA 챗봇~')
 
 # enter token
 import os
