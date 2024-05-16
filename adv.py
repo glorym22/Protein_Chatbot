@@ -143,7 +143,7 @@ def generate_response(query_text, vectorstore, callback):
 
 
 def generate_summarize(raw_text, callback):
-    llm = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0, streaming=True, callbacks=[callback])
+    llm = ChatOpenAI(model_name="gpt-4o", temperature=0, streaming=True, callbacks=[callback])
 
     rag_prompt = [
         SystemMessage(
@@ -159,7 +159,7 @@ def generate_summarize(raw_text, callback):
 
 def analyze_keyword(raw_text, callback, keyword):
     # generator
-    llm = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0, streaming=True, callbacks=[callback])
+    llm = ChatOpenAI(model_name="gpt-4o", temperature=0, streaming=True, callbacks=[callback])
 
     # prompt formatting
     rag_prompt = [
@@ -176,7 +176,7 @@ def analyze_keyword(raw_text, callback, keyword):
 
 def abstract_summary(raw_text, callback):
     # generator
-    llm = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0, streaming=True, callbacks=[callback])
+    llm = ChatOpenAI(model_name="gpt-4o", temperature=0, streaming=True, callbacks=[callback])
 
     # prompt formatting
     rag_prompt = [
