@@ -130,7 +130,7 @@ def generate_response(query_text, vectorstore, callback):
     # chaining
     rag_prompt = [
         SystemMessage(
-            content="너는 문서에 대해 질의응답을 하는 '씨엔이'야. 주어진 논문과 문서를 참고하여 사용자의 질문에 답변을 해줘. 문서에 내용이 부족하다면 네가 알고 있는 지식을 포함해서 답변해줘"
+            content="너는 문서에 대해 질의응답을 하는 '리냥이'야. 주어진 논문과 문서를 참고하여 사용자의 질문에 답변을 해줘. 문서에 내용이 부족하다면 네가 알고 있는 지식을 포함해서 답변해줘"
             ),
         HumanMessage(
             content=f"질문:{query_text}\n\n{docs}"
@@ -153,8 +153,43 @@ def generate_summarize(raw_text, callback):
             content=raw_text
             ),
         ]
+    
     response = llm(rag_prompt)
+    return response.content
 
+def analyze_keyword(raw_text, callback, keyword):
+    # generator
+    llm = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0, streaming=True, callbacks=[callback])
+
+    # prompt formatting
+    rag_prompt = [
+        SystemMessage(
+            content="다음 나올 문서에 " + str(keyword)+"와 관련된 내용이 있는지 분석해줘."
+        ),
+        HumanMessage(
+            content=raw_text
+        ),
+    ]
+    response = llm(rag_prompt)
+    return response.content
+
+
+def abstract_summary(raw_text, callback):
+    # generator
+    llm = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0, streaming=True, callbacks=[callback])
+
+    # prompt formatting
+    rag_prompt = [
+        SystemMessage(
+            content="다음 나올 문서를 읽고 분석해서 교수님께 드리는 1000자 내외의 레포트를 작성하도록 해"
+        ),
+        HumanMessage(
+            content=raw_text
+        ),
+    ]
+
+    
+    response = llm(rag_prompt)
     return response.content
 
 
@@ -169,6 +204,8 @@ save_button = st.sidebar.button("Save Key")
 if save_button and len(api_key)>10:
     os.environ["OPENAI_API_KEY"] = api_key
     st.sidebar.success("API Key saved successfully!")
+
+keyword = st.sidebar.text_input("Enter keyword to analyze", value="")
 
 # file upload
 uploaded_file = st.file_uploader('Upload an document', type=['hwp','pdf'])
@@ -193,15 +230,25 @@ for msg in st.session_state.messages:
     st.chat_message(msg.role).write(msg.content)
     
 # message interaction
-if prompt := st.chat_input("'요약'이라고 입력하면 논문을 요약함 =^._.^= ∫"):
+if prompt := st.chat_input("'Sum', 'Keyword', 또는 'Report'를 입력해주세요 =^._.^= ∫"):
     st.session_state.messages.append(ChatMessage(role="user", content=prompt))
     st.chat_message("user").write(prompt)
 
     with st.chat_message("assistant"):
         stream_handler = StreamHandler(st.empty())
         
-        if prompt == "요약":
+        if prompt == "Sum":
             response = generate_summarize(st.session_state['raw_text'],stream_handler)
+            st.session_state["messages"].append(
+                ChatMessage(role="assistant", content=response)
+            )
+        elif prompt == "Keyword":
+                 response = analyze_keyword(st.session_state['raw_text'], stream_handler, keyword)
+                 st.session_state["messages"].append(
+                     ChatMessage(role="assistant", content=response)
+                 )
+        elif prompt == "Report":
+            response = abstract_summary(st.session_state['raw_text'], stream_handler)
             st.session_state["messages"].append(
                 ChatMessage(role="assistant", content=response)
             )
