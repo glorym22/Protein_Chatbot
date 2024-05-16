@@ -91,10 +91,8 @@ def process_uploaded_file(uploaded_file):
     # Load document if file is uploaded
     if uploaded_file is not None:
         # loader
-        # pdf파일을 처리하려면?
         if uploaded_file.type == 'application/pdf':
             raw_text = get_pdf_text(uploaded_file)
-        # hwp파일을 처리하려면? (hwp loader(parser)는 난이도 매우 어려움)
         elif uploaded_file.type == 'application/octet-stream':
             raw_text = get_hwp_text(uploaded_file)
 
@@ -105,13 +103,14 @@ def process_uploaded_file(uploaded_file):
             chunk_overlap  = 200,
             length_function = len,
             is_separator_regex = False,
-        )
+            )
         all_splits = text_splitter.create_documents([raw_text])
+
         print("총 " + str(len(all_splits)) + "개의 passage")
         
         # storage
         vectorstore = FAISS.from_documents(documents=all_splits, embedding=OpenAIEmbeddings())
-
+                
         return vectorstore, raw_text
     return None
 
@@ -123,54 +122,89 @@ def generate_response(query_text, vectorstore, callback):
     docs = ""
     for i, doc in enumerate(docs_list):
         docs += f"'문서{i+1}':{doc.page_content}\n"
-    print(docs)
         
     # generator
-    llm = ChatOpenAI(model_name="gpt-4o", temperature=0, streaming=True, callbacks=[callback])
+    llm = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0, streaming=True, callbacks=[callback])
     
     # chaining
     rag_prompt = [
         SystemMessage(
-            content="너는 문서에 대해 질의응답을 하는 '서울대'야. 주어진 문서를 참고하여 사용자의 질문에 답변을 해줘. 문서에 내용이 정확하게 나와있지 않으면 너의 지식 선에서 잘 얘기해줘. 답변은 정중하게 하도록 해. 만약 대답하기 어려운 내용이 나온다면 너를 제작한 개발자가를 탓하도록 해"
-        ),
+            content="너는 문서에 대해 질의응답을 하는 '리냥이'야. 주어진 논문과 문서를 참고하여 사용자의 질문에 답변을 해줘. 문서에 내용이 부족하다면 네가 알고 있는 지식을 포함해서 답변해줘. 가능한 한 간결하게 답변해."
+            ),
         HumanMessage(
             content=f"질문:{query_text}\n\n{docs}"
         ),
     ]
-
+    
     response = llm(rag_prompt)
     
     return response.content
 
 
 def generate_summarize(raw_text, callback):
-    # generator 
     llm = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0, streaming=True, callbacks=[callback])
+
+    rag_prompt = [
+        SystemMessage(
+            content="다음 나올 문서를 'Notion style'로 요약해줘. Introduction을 간단하게 요약한 후 Method와 Result 부분은 각 챕터별로 불릿 포인트를 사용해서 최대한 자세하게 설명하도록 해. References 내용은 제외해"
+            ),
+        HumanMessage(
+            content=raw_text
+            ),
+        ]
     
+    response = llm(rag_prompt)
+    return response.content
+
+def analyze_keyword(raw_text, callback, keyword):
+    # generator
+    llm = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0, streaming=True, callbacks=[callback])
+
     # prompt formatting
     rag_prompt = [
         SystemMessage(
-            content="다음 나올 문서를 'Notion style'로 요약해줘. 중요한 내용만."
+            content="다음 나올 문서에 " + str(keyword)+"와 관련된 내용이 있는지 분석해줘."
         ),
         HumanMessage(
             content=raw_text
         ),
     ]
+    response = llm(rag_prompt)
+    return response.content
+
+
+def abstract_summary(raw_text, callback):
+    # generator
+    llm = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0, streaming=True, callbacks=[callback])
+
+    # prompt formatting
+    rag_prompt = [
+        SystemMessage(
+            content="다음 나올 문서를 읽고 분석해서 교수님께 드리는 3000자 내외의 레포트를 작성하도록 해. 가능한 한 간결하게 요약해줘."
+        ),
+        HumanMessage(
+            content=raw_text
+        ),
+    ]
+
     
     response = llm(rag_prompt)
     return response.content
 
 
 # page title
-st.set_page_config(page_title='*ฅ^•ﻌ•^ฅ* Theleelab 챗봇')
-st.title('*ฅ^•ﻌ•^ฅ* Theleelab 챗봇')
+st.set_page_config(page_title='/ᐠ ._. ᐟ\ﾉ 문서 기반 요약 및 QA 챗봇')
+st.title('/ᐠ ._. ᐟ\ﾉ The leelab \n 문서 기반 요약 및 QA 챗봇')
 
+# enter token
 import os
 api_key = st.sidebar.text_input("Enter your OpenAI API Key", type="password")
 save_button = st.sidebar.button("Save Key")
 if save_button and len(api_key)>10:
     os.environ["OPENAI_API_KEY"] = api_key
     st.sidebar.success("API Key saved successfully!")
+
+keyword = st.sidebar.text_input("Enter keyword to analyze", value="")
 
 # file upload
 uploaded_file = st.file_uploader('Upload an document', type=['hwp','pdf'])
@@ -186,7 +220,7 @@ if uploaded_file:
 if "messages" not in st.session_state:
     st.session_state["messages"] = [
         ChatMessage(
-            role="assistant", content="항상 수고가 많으십니다^^7 어떤게 궁금하신가요?"
+            role="assistant", content="항상 수고가 많으십니다!ฅ^•ﻌ•^ฅ 어떤게 궁금하신가요?"
         )
     ]
 
@@ -195,21 +229,19 @@ for msg in st.session_state.messages:
     st.chat_message(msg.role).write(msg.content)
     
 # message interaction
-if prompt := st.chat_input("'요약'이라고 입력해보세요!"):
+if prompt := st.chat_input("'Sum', 'Keyword', 또는 'Report'를 입력해주세요 =^._.^= ∫"):
     st.session_state.messages.append(ChatMessage(role="user", content=prompt))
     st.chat_message("user").write(prompt)
 
     with st.chat_message("assistant"):
         stream_handler = StreamHandler(st.empty())
         
-        if prompt == "요약":
+        if prompt == "Sum":
             response = generate_summarize(st.session_state['raw_text'],stream_handler)
             st.session_state["messages"].append(
                 ChatMessage(role="assistant", content=response)
             )
-        
-        else:
-            response = generate_response(prompt, st.session_state['vectorstore'], stream_handler)
-            st.session_state["messages"].append(
-                ChatMessage(role="assistant", content=response)
-            )
+        elif prompt == "Keyword":
+                 response = analyze_keyword(st.session_state['raw_text'], stream_handler, keyword)
+                 st.session_state["messages"].append(
+                     ChatMessage(role="assistant
