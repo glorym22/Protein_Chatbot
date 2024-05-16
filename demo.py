@@ -99,8 +99,8 @@ def process_uploaded_file(uploaded_file):
         # splitter
         text_splitter = CharacterTextSplitter(
             separator = "\n\n",
-            chunk_size = 800,
-            chunk_overlap  = 160,
+            chunk_size = 1000,
+            chunk_overlap  = 200,
             length_function = len,
             is_separator_regex = False,
             )
@@ -124,7 +124,7 @@ def generate_response(query_text, vectorstore, callback):
         docs += f"'문서{i+1}':{doc.page_content}\n"
         
     # generator
-    llm = ChatOpenAI(model_name="gpt-4o", temperature=0, streaming=True, callbacks=[callback])
+    llm = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0, streaming=True, callbacks=[callback])
     
     # chaining
     rag_prompt = [
@@ -244,4 +244,15 @@ if prompt := st.chat_input("'Sum', 'Keyword', 또는 'Report'를 입력해주세
         elif prompt == "Keyword":
                  response = analyze_keyword(st.session_state['raw_text'], stream_handler, keyword)
                  st.session_state["messages"].append(
-                     ChatMessage(role="assistant
+                     ChatMessage(role="assistant", content=response)
+            )
+        elif prompt == "abstract":
+            response = abstract_summary(st.session_state['raw_text'], stream_handler)
+            st.session_state["messages"].append(
+                ChatMessage(role="assistant", content=response)
+            )
+        else:
+            response = generate_response(prompt, st.session_state['vectorstore'], stream_handler)
+            st.session_state["messages"].append(
+                ChatMessage(role="assistant", content=response)
+            )
