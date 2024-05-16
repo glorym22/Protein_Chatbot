@@ -99,8 +99,8 @@ def process_uploaded_file(uploaded_file):
         # splitter
         text_splitter = CharacterTextSplitter(
             separator = "\n\n",
-            chunk_size = 1000,
-            chunk_overlap  = 200,
+            chunk_size = 800,
+            chunk_overlap  = 160,
             length_function = len,
             is_separator_regex = False,
             )
@@ -124,7 +124,7 @@ def generate_response(query_text, vectorstore, callback):
         docs += f"'문서{i+1}':{doc.page_content}\n"
         
     # generator
-    llm = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0, streaming=True, callbacks=[callback])
+    llm = ChatOpenAI(model_name="gpt-4o", temperature=0, streaming=True, callbacks=[callback])
     
     # chaining
     rag_prompt = [
