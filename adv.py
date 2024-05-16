@@ -181,7 +181,7 @@ def abstract_summary(raw_text, callback):
     # prompt formatting
     rag_prompt = [
         SystemMessage(
-            content="다음 나올 문서를 읽고 분석해서 교수님께 드리는 1000자 내외의 레포트를 작성하도록 해"
+            content="다음 나올 문서를 읽고 분석해서 교수님께 드리는 3000자 내외의 레포트를 작성하도록 해"
         ),
         HumanMessage(
             content=raw_text
