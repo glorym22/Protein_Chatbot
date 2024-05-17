@@ -221,7 +221,7 @@ if uploaded_file:
 if "messages" not in st.session_state:
     st.session_state["messages"] = [
         ChatMessage(
-            role="assistant", content="항상 수고가 많으십니다!ฅ^•ﻌ•^ฅ 어떤게 궁금하신가요?"
+            role="assistant", content="항상 수고가 많으십니다!≽^•⩊•^≼ 어떤게 궁금하신가요? =^._.^= ∫"
         )
     ]
 
@@ -230,7 +230,7 @@ for msg in st.session_state.messages:
     st.chat_message(msg.role).write(msg.content)
     
 # message interaction
-if prompt := st.chat_input("'Sum', 'Keyword', 또는 'Report'를 입력해주세요 =^._.^= ∫"):
+if prompt := st.chat_input("'Sum', 'Keyword', 또는 'Report'를 입력해주세요 /ᐠ •ヮ• マ Ⳋ"):
     st.session_state.messages.append(ChatMessage(role="user", content=prompt))
     st.chat_message("user").write(prompt)
 
