@@ -125,7 +125,7 @@ def generate_response(query_text, vectorstore, callback):
         docs += f"'문서{i+1}':{doc.page_content}\n"
         
     # generator
-    llm = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0, streaming=True, callbacks=[callback])
+    llm = ChatOpenAI(model_name="gpt-4o", temperature=0, streaming=True, callbacks=[callback])
     
     # chaining
     rag_prompt = [
@@ -147,7 +147,7 @@ def generate_summarize(raw_text, callback):
 
     rag_prompt = [
         SystemMessage(
-            content="다음 나올 문서를 'Notion style'로 요약해줘. Introduction을 간단하게 요약한 후 Method와 Result 부분은 각 챕터별로 불릿 포인트를 사용해서 최대한 자세하게 설명하도록 해. References 내용은 제외해"
+            content="Summarize the document in 'Notion style'. After briefly summarizing the Introduction, explain Method, Result, and Discussion in as much detail as possible using bullet points for each chapter. Excluding References content"
             ),
         HumanMessage(
             content=raw_text
@@ -181,7 +181,7 @@ def abstract_summary(raw_text, callback):
     # prompt formatting
     rag_prompt = [
         SystemMessage(
-            content="다음 나올 문서를 읽고 분석해서 교수님께 드리는 3000자 내외의 레포트를 작성하도록 해"
+            content="Read and analyze the document and write a report of approximately 3000 words to the professor."
         ),
         HumanMessage(
             content=raw_text
