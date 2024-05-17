@@ -148,6 +148,7 @@ def generate_summarize(raw_text, callback):
         SystemMessage(
             content="다음 나올 문서를 'Notion style'로 요약해줘. Introduction을 간단하게 요약한 후 Method와 Result 부분은 각 챕터별로 불릿 포인트를 사용해서 최대한 자세하게 설명하도록 해. References 내용은 제외해"
             ),
+        end_text = "\n\n ≽^•⩊•^≼______________________________________________________________________________"
         HumanMessage(
             content=raw_text
             ),
@@ -246,7 +247,7 @@ if prompt := st.chat_input("'Sum', 'Keyword', 또는 'Report'를 입력해주세
                  st.session_state["messages"].append(
                      ChatMessage(role="assistant", content=response)
             )
-        elif prompt == "abstract":
+        elif prompt == "Report":
             response = abstract_summary(st.session_state['raw_text'], stream_handler)
             st.session_state["messages"].append(
                 ChatMessage(role="assistant", content=response)
