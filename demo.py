@@ -144,18 +144,19 @@ def generate_response(query_text, vectorstore, callback):
 def generate_summarize(raw_text, callback):
     llm = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0, streaming=True, callbacks=[callback])
 
+    end_text = "\n\n ≽^•⩊•^≼______________________________________________________________________________"
+
     rag_prompt = [
         SystemMessage(
             content="다음 나올 문서를 'Notion style'로 요약해줘. Introduction을 간단하게 요약한 후 Method와 Result 부분은 각 챕터별로 불릿 포인트를 사용해서 최대한 자세하게 설명하도록 해. References 내용은 제외해"
             ),
-        end_text = "\n\n ≽^•⩊•^≼______________________________________________________________________________"
         HumanMessage(
             content=raw_text
             ),
         ]
     
     response = llm(rag_prompt)
-    return response.content
+    return response.content + end_text
 
 def analyze_keyword(raw_text, callback, keyword):
     # generator
