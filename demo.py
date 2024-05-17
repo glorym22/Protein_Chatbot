@@ -148,7 +148,7 @@ def generate_summarize(raw_text, callback):
 
     rag_prompt = [
         SystemMessage(
-            content="다음 나올 문서를 'Notion style'로 요약해줘. Introduction을 간단하게 요약한 후 Method와 Result 부분은 각 챕터별로 불릿 포인트를 사용해서 최대한 자세하게 설명하도록 해. References 내용은 제외해"
+            content="다음 나올 문서를 'Notion style'로 요약해줘. Introduction을 간단하게 요약한 후 Method와 Result, Discussion은 각 챕터별로 불릿 포인트를 사용해서 최대한 자세하게 설명하도록 해. References 내용은 제외해, 논문요약을 잘 하면 상으로 참치를 줄게"
             ),
         HumanMessage(
             content=raw_text
@@ -182,7 +182,7 @@ def abstract_summary(raw_text, callback):
     # prompt formatting
     rag_prompt = [
         SystemMessage(
-            content="다음 나올 문서를 읽고 분석해서 교수님께 드리는 3000자 내외의 레포트를 작성하도록 해. 가능한 한 간결하게 요약해줘."
+            content="다음 나올 문서를 읽고 분석해서 교수님께 드리는 4000자 내외의 레포트를 작성하도록 해. 중요한 내용이 잘 포함되도록 요약해줘."
         ),
         HumanMessage(
             content=raw_text
