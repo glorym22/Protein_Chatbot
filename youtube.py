@@ -207,16 +207,7 @@ if save_button and len(api_key)>10:
 
 keyword = st.sidebar.text_input("Enter keyword to analyze", value="")
 
-# file upload
-uploaded_file = st.file_uploader('Upload an document', type=['hwp','pdf'])
 
-# file upload logic
-if uploaded_file:
-    vectorstore, raw_text = process_uploaded_file(uploaded_file)
-    if vectorstore:
-        st.session_state['vectorstore'] = vectorstore
-        st.session_state['raw_text'] = raw_text
-        
 # chatbot greatings
 if "messages" not in st.session_state:
     st.session_state["messages"] = [
