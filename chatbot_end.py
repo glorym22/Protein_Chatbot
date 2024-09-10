@@ -7,30 +7,38 @@ from langchain.schema import HumanMessage, SystemMessage
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.schema import ChatMessage
 from dotenv import load_dotenv
-import olefile
-import zlib
-import struct
 from pdfminer.high_level import extract_text
 import os
 
 load_dotenv()
 
-# Existing StreamHandler class remains unchanged
+# handle streaming conversation
+class StreamHandler(BaseCallbackHandler):
+    def __init__(self, container, initial_text=""):
+        self.container = container
+        self.text = initial_text
 
-# Existing get_hwp_text and get_pdf_text functions remain unchanged
+    def on_llm_new_token(self, token: str, **kwargs) -> None:
+        self.text += token
+        self.container.markdown(self.text)
 
+# Function to extract text from a PDF file
+def get_pdf_text(filename):
+    raw_text = extract_text(filename)
+    return raw_text
+
+# document preprocess
 def process_uploaded_files(uploaded_files):
     vectorstores = {}
     raw_texts = {}
     for uploaded_file in uploaded_files:
         if uploaded_file.type == 'application/pdf':
             raw_text = get_pdf_text(uploaded_file)
-        elif uploaded_file.type == 'application/octet-stream':
-            raw_text = get_hwp_text(uploaded_file)
         else:
             st.warning(f"Unsupported file type: {uploaded_file.type}")
             continue
 
+        # splitter
         text_splitter = CharacterTextSplitter(
             separator = "\n\n",
             chunk_size = 1000,
@@ -40,6 +48,7 @@ def process_uploaded_files(uploaded_files):
         )
         all_splits = text_splitter.create_documents([raw_text])
         
+        # storage
         vectorstore = FAISS.from_documents(documents=all_splits, embedding=OpenAIEmbeddings())
         
         vectorstores[uploaded_file.name] = vectorstore
@@ -47,21 +56,69 @@ def process_uploaded_files(uploaded_files):
 
     return vectorstores, raw_texts
 
+# generate response using RAG technic
 def generate_response(query_text, vectorstores, callback):
+    # retriever
     docs = ""
     for file_name, vectorstore in vectorstores.items():
         docs_list = vectorstore.similarity_search(query_text, k=2)
         for i, doc in enumerate(docs_list):
             docs += f"'{file_name}-문서{i+1}':{doc.page_content}\n"
     
+    # generator
     llm = ChatOpenAI(model_name="gpt-4", temperature=0, streaming=True, callbacks=[callback])
     
+    # chaining
     rag_prompt = [
         SystemMessage(
             content="너는 여러 문서에 대해 질의응답을 하는 '리냥이'야. 주어진 논문들과 문서들을 참고하여 사용자의 질문에 답변을 해줘. 문서에 내용이 부족하다면 네가 알고 있는 지식을 포함해서 답변해줘"
         ),
         HumanMessage(
             content=f"질문:{query_text}\n\n{docs}"
+        ),
+    ]
+    
+    response = llm(rag_prompt)
+    return response.content
+
+def generate_summarize(raw_text, callback):
+    llm = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0, streaming=True, callbacks=[callback])
+
+    rag_prompt = [
+        SystemMessage(
+            content="Summarize the document in 'Notion style'. After briefly summarizing the Introduction, explain Method, Result, and Discussion in as much detail as possible using bullet points for each chapter. Excluding References content"
+        ),
+        HumanMessage(
+            content=raw_text
+        ),
+    ]
+    
+    response = llm(rag_prompt)
+    return response.content
+
+def analyze_keyword(raw_text, callback, keyword):
+    llm = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0, streaming=True, callbacks=[callback])
+
+    rag_prompt = [
+        SystemMessage(
+            content=f"다음 나올 문서에 {keyword}와 관련된 내용이 있는지 분석해줘."
+        ),
+        HumanMessage(
+            content=raw_text
+        ),
+    ]
+    response = llm(rag_prompt)
+    return response.content
+
+def abstract_summary(raw_text, callback):
+    llm = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0, streaming=True, callbacks=[callback])
+
+    rag_prompt = [
+        SystemMessage(
+            content="Read and analyze the document and write a report of approximately 3000 words to the professor."
+        ),
+        HumanMessage(
+            content=raw_text
         ),
     ]
     
@@ -83,8 +140,6 @@ def compare_documents(raw_texts, callback):
     response = llm(rag_prompt)
     return response.content
 
-# Existing generate_summarize, analyze_keyword, and abstract_summary functions remain unchanged
-
 # page title
 st.set_page_config(page_title='/ᐠ ._. ᐟ\ﾉ 다중 문서 기반 요약 및 QA 챗봇')
 st.title('/ᐠ ._. ᐟ\ﾉ The leelab \n 다중 문서 기반 요약 및 QA 챗봇')
@@ -99,7 +154,7 @@ if save_button and len(api_key)>10:
 keyword = st.sidebar.text_input("Enter keyword to analyze", value="")
 
 # file upload
-uploaded_files = st.file_uploader('Upload documents', type=['hwp','pdf'], accept_multiple_files=True)
+uploaded_files = st.file_uploader('Upload documents', type=['pdf'], accept_multiple_files=True)
 
 # file upload logic
 if uploaded_files:
@@ -151,7 +206,7 @@ if prompt := st.chat_input("'Sum', 'Keyword', 'Report', 'Compare' 또는 질문�
             st.write(response)
         else:
             response = generate_response(prompt, st.session_state['vectorstores'], stream_handler)
-            
+        
         st.session_state["messages"].append(
             ChatMessage(role="assistant", content=response)
         )
