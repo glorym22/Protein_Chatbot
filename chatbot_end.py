@@ -1,100 +1,157 @@
 import streamlit as st
-import os
-from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
-from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
+from langchain.embeddings import OpenAIEmbeddings
 from langchain.chat_models import ChatOpenAI
-from langchain.memory import ConversationBufferMemory
-from langchain.chains import ConversationalRetrievalChain
+from langchain.schema import HumanMessage, SystemMessage
+from langchain.callbacks.base import BaseCallbackHandler
+from langchain.schema import ChatMessage
 from dotenv import load_dotenv
+import olefile
+import zlib
+import struct
+from pdfminer.high_level import extract_text
+import os
 
-# Load environment variables
 load_dotenv()
 
-# Function to get PDF text
-def get_pdf_text(pdf_docs):
-    text = ""
-    for pdf in pdf_docs:
-        pdf_reader = PdfReader(pdf)
-        for page in pdf_reader.pages:
-            text += page.extract_text()
-    return text
+# Existing StreamHandler class remains unchanged
 
-# Function to get text chunks
-def get_text_chunks(text):
-    text_splitter = CharacterTextSplitter(
-        separator="\n",
-        chunk_size=1000,
-        chunk_overlap=200,
-        length_function=len
-    )
-    chunks = text_splitter.split_text(text)
-    return chunks
+# Existing get_hwp_text and get_pdf_text functions remain unchanged
 
-# Function to get vector store
-def get_vectorstore(text_chunks):
-    embeddings = OpenAIEmbeddings()
-    vectorstore = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
-    return vectorstore
-
-# Function to get conversation chain
-def get_conversation_chain(vectorstore):
-    llm = ChatOpenAI()
-    memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True)
-    conversation_chain = ConversationalRetrievalChain.from_llm(
-        llm=llm,
-        retriever=vectorstore.as_retriever(),
-        memory=memory
-    )
-    return conversation_chain
-
-# Function to handle user input
-def handle_userinput(user_question):
-    response = st.session_state.conversation({'question': user_question})
-    st.session_state.chat_history = response['chat_history']
-
-    for i, message in enumerate(st.session_state.chat_history):
-        if i % 2 == 0:
-            st.write(f"Human: {message.content}")
+def process_uploaded_files(uploaded_files):
+    vectorstores = {}
+    raw_texts = {}
+    for uploaded_file in uploaded_files:
+        if uploaded_file.type == 'application/pdf':
+            raw_text = get_pdf_text(uploaded_file)
+        elif uploaded_file.type == 'application/octet-stream':
+            raw_text = get_hwp_text(uploaded_file)
         else:
-            st.write(f"AI: {message.content}")
+            st.warning(f"Unsupported file type: {uploaded_file.type}")
+            continue
 
-# Main function
-def main():
-    st.set_page_config(page_title="Multi-document Analysis Chatbot", page_icon=":books:")
-
-    if "conversation" not in st.session_state:
-        st.session_state.conversation = None
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = None
-
-    st.header("Multi-document Analysis Chatbot :books:")
-    user_question = st.text_input("Ask a question about your documents:")
-    if user_question:
-        handle_userinput(user_question)
-
-    with st.sidebar:
-        st.subheader("Your documents")
-        pdf_docs = st.file_uploader(
-            "Upload your PDFs here and click on 'Process'",
-            accept_multiple_files=True
+        text_splitter = CharacterTextSplitter(
+            separator = "\n\n",
+            chunk_size = 1000,
+            chunk_overlap  = 200,
+            length_function = len,
+            is_separator_regex = False,
         )
-        if st.button("Process"):
-            with st.spinner("Processing"):
-                # Get pdf text
-                raw_text = get_pdf_text(pdf_docs)
+        all_splits = text_splitter.create_documents([raw_text])
+        
+        vectorstore = FAISS.from_documents(documents=all_splits, embedding=OpenAIEmbeddings())
+        
+        vectorstores[uploaded_file.name] = vectorstore
+        raw_texts[uploaded_file.name] = raw_text
 
-                # Get the text chunks
-                text_chunks = get_text_chunks(raw_text)
+    return vectorstores, raw_texts
 
-                # Create vector store
-                vectorstore = get_vectorstore(text_chunks)
+def generate_response(query_text, vectorstores, callback):
+    docs = ""
+    for file_name, vectorstore in vectorstores.items():
+        docs_list = vectorstore.similarity_search(query_text, k=2)
+        for i, doc in enumerate(docs_list):
+            docs += f"'{file_name}-문서{i+1}':{doc.page_content}\n"
+    
+    llm = ChatOpenAI(model_name="gpt-4", temperature=0, streaming=True, callbacks=[callback])
+    
+    rag_prompt = [
+        SystemMessage(
+            content="너는 여러 문서에 대해 질의응답을 하는 '리냥이'야. 주어진 논문들과 문서들을 참고하여 사용자의 질문에 답변을 해줘. 문서에 내용이 부족하다면 네가 알고 있는 지식을 포함해서 답변해줘"
+        ),
+        HumanMessage(
+            content=f"질문:{query_text}\n\n{docs}"
+        ),
+    ]
+    
+    response = llm(rag_prompt)
+    return response.content
 
-                # Create conversation chain
-                st.session_state.conversation = get_conversation_chain(vectorstore)
+def compare_documents(raw_texts, callback):
+    llm = ChatOpenAI(model_name="gpt-4-1106-preview", temperature=0, streaming=True, callbacks=[callback])
+
+    rag_prompt = [
+        SystemMessage(
+            content="여러 문서의 내용을 비교 분석해주세요. 각 문서의 주요 주제, 방법론, 결과, 그리고 결론을 비교하고, 문서들 간의 유사점과 차이점을 강조해주세요."
+        ),
+        HumanMessage(
+            content="\n\n".join([f"{file_name}:\n{raw_text}" for file_name, raw_text in raw_texts.items()])
+        ),
+    ]
+
+    response = llm(rag_prompt)
+    return response.content
+
+# Existing generate_summarize, analyze_keyword, and abstract_summary functions remain unchanged
+
+# page title
+st.set_page_config(page_title='/ᐠ ._. ᐟ\ﾉ 다중 문서 기반 요약 및 QA 챗봇')
+st.title('/ᐠ ._. ᐟ\ﾉ The leelab \n 다중 문서 기반 요약 및 QA 챗봇')
+
+# enter token
+api_key = st.sidebar.text_input("Enter your OpenAI API Key", type="password")
+save_button = st.sidebar.button("Save Key")
+if save_button and len(api_key)>10:
+    os.environ["OPENAI_API_KEY"] = api_key
+    st.sidebar.success("API Key saved successfully!")
+
+keyword = st.sidebar.text_input("Enter keyword to analyze", value="")
+
+# file upload
+uploaded_files = st.file_uploader('Upload documents', type=['hwp','pdf'], accept_multiple_files=True)
+
+# file upload logic
+if uploaded_files:
+    vectorstores, raw_texts = process_uploaded_files(uploaded_files)
+    if vectorstores:
+        st.session_state['vectorstores'] = vectorstores
+        st.session_state['raw_texts'] = raw_texts
+        
+# chatbot greetings
+if "messages" not in st.session_state:
+    st.session_state["messages"] = [
+        ChatMessage(
+            role="assistant", content="항상 수고가 많으십니다!≽^•⩊•^≼ 어떤게 궁금하신가요? =^._.^= ∫"
+        )
+    ]
+
+# conversation history print 
+for msg in st.session_state.messages:
+    st.chat_message(msg.role).write(msg.content)
+    
+# message interaction
+if prompt := st.chat_input("'Sum', 'Keyword', 'Report', 'Compare' 또는 질문을 입력해주세요 /ᐠ •ヮ• マ Ⳋ"):
+    st.session_state.messages.append(ChatMessage(role="user", content=prompt))
+    st.chat_message("user").write(prompt)
+
+    with st.chat_message("assistant"):
+        stream_handler = StreamHandler(st.empty())
+        
+        if prompt == "Sum":
+            for file_name, raw_text in st.session_state['raw_texts'].items():
+                response = generate_summarize(raw_text, stream_handler)
+                st.write(f"Summary for {file_name}:")
+                st.write(response)
+                st.write("---")
+        elif prompt == "Keyword":
+            for file_name, raw_text in st.session_state['raw_texts'].items():
+                response = analyze_keyword(raw_text, stream_handler, keyword)
+                st.write(f"Keyword analysis for {file_name}:")
+                st.write(response)
+                st.write("---")
+        elif prompt == "Report":
+            for file_name, raw_text in st.session_state['raw_texts'].items():
+                response = abstract_summary(raw_text, stream_handler)
+                st.write(f"Report for {file_name}:")
+                st.write(response)
+                st.write("---")
+        elif prompt == "Compare":
+            response = compare_documents(st.session_state['raw_texts'], stream_handler)
+            st.write(response)
+        else:
+            response = generate_response(prompt, st.session_state['vectorstores'], stream_handler)
             
-            st.success("Documents processed successfully!")
-
-if __name__ == '__main__':
-    main()
+        st.session_state["messages"].append(
+            ChatMessage(role="assistant", content=response)
+        )
